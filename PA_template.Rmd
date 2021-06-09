@@ -1,0 +1,89 @@
+---
+title: "Course project 1"
+author: "Yue Wang"
+date: "6/8/2021"
+output: html_document
+---
+Loading and preprocessing the data
+```{r}
+library(knitr)
+setwd("~/Desktop/coursera/Reproducible Research/Course Project 1")
+aa<- read.csv("activity.csv")
+aa$date<- as.Date(aa$date)
+```
+To calculate the total number of steps taken per day
+```{r}
+bb<- sapply(split(aa$steps, aa$date), sum, na.rm = TRUE)
+print(bb)
+```
+To make a histogram of the total number of steps taken per day
+```{r}
+hist(bb, xlab = "number of steps", main = "Total number of steps taken per day")
+```
+To calculate and report the mean and median of the total number of steps taken per day
+```{r}
+mean(bb)
+median(bb)
+```
+To make a time series plot of the 5-minute interval and the average number of steps taken, averaged across all days
+```{r scatterplot}
+cc<- as.data.frame(sapply(split(aa$steps, aa$interval), mean, na.rm = TRUE))
+colnames(cc) <- "steps"
+cc$intervals<- aa[1:288, 3]
+library(ggplot2)
+g<- ggplot(cc, aes(intervals, steps))
+g + geom_point() + geom_line()
+```
+To find out which 5-minute interval contains the maximum number of steps
+```{r}
+subset(cc, cc$steps == max(cc$steps))
+```
+To calculate and report the total number of missing values in the dataset
+```{r}
+sum(is.na(aa$steps))
+```
+To devise a strategy for fillling in all of the missing values in the dataset
+```{r}
+for(i in 1:nrow(aa)){
+  if(is.na(aa[i, 1])){
+    aa[i, 1]<- cc[cc$intervals == aa[i, 3], ]$steps
+  }
+}
+newdataset<- aa
+```
+To make new histogram with new dataset
+```{r}
+dd<- sapply(split(newdataset$steps, newdataset$date), sum, na.rm = TRUE)
+plot3<- hist(bb, xlab = "number of steps", main = "Total number of steps taken per day")
+plot3
+```
+The new mean and median
+```{r}
+mean(dd)
+median(dd)
+```
+To create a new factor variable in the dataset with two levels - "weekday" and "weekend"
+```{r}
+newdataset$date<- as.Date(newdataset$date)
+newdataset$days<- weekdays(newdataset$date)
+for(i in 1:nrow(newdataset)){
+ if (newdataset[i, 4] %in% c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")){
+    newdataset[i, 4]<- "weekday"
+  } else {newdataset[i, 4]<- "weekend"}
+}
+newdataset$days<- as.factor(newdataset$days)
+head(newdataset)
+```
+To differentiate activity levels between weekdays and weekends
+```{r}
+ee<- split(newdataset, newdataset$days)
+ff<- lapply(ee, function(x) with(x, tapply(steps, interval, mean)))
+ff<- as.data.frame(ff)
+colnames(ff)<- c("weekday", "weekend")
+library(tidyr)
+ff<- ff %>% gather(days, steps, "weekday", "weekend")
+ff$intervals<- cc$intervals
+par(mfrow = c(2, 1))
+with(subset(ff, ff$days == "weekday"), plot(intervals, steps, type = "l", main = "weekday"))
+with(subset(ff, ff$days == "weekend"), plot(intervals, steps, type = "l", main = "weekend"))
+```
